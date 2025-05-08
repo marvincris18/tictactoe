@@ -62,6 +62,8 @@ const GameController = (function() {
     
     const getCurrentPlayer = () => players[currentPlayerIndex];
     
+    const getPlayers = () => [...players]; // Return a copy of the players array
+    
     const switchTurn = () => {
         currentPlayerIndex = currentPlayerIndex === 0 ? 1 : 0;
     };
@@ -124,7 +126,7 @@ const GameController = (function() {
         return null;
     };
     
-    return { initGame, playTurn, isGameActive, resetGame, getCurrentPlayer };
+    return { initGame, playTurn, isGameActive, resetGame, getCurrentPlayer, getPlayers };
 })();
 
 // Display controller module
@@ -136,6 +138,7 @@ const DisplayController = (function() {
     const cells = document.querySelectorAll('.cell');
     const startBtn = document.getElementById('start-game');
     const restartBtn = document.getElementById('restart');
+    const changePlayersBtn = document.getElementById('change-players');
     const player1Input = document.getElementById('player1');
     const player2Input = document.getElementById('player2');
     
@@ -144,11 +147,19 @@ const DisplayController = (function() {
     
     const updateBoard = () => {
         const board = Gameboard.getBoard();
+        const nextMarker = GameController.getCurrentPlayer().getMarker();
+        
         cells.forEach((cell, index) => {
             cell.textContent = board[index] || '';
             cell.className = 'cell'; // Reset cell classes
+            
+            // Add class for existing markers
             if (board[index]) {
                 cell.classList.add(board[index].toLowerCase());
+                cell.removeAttribute('data-next-marker');
+            } else {
+                // Add next marker attribute for empty cells
+                cell.setAttribute('data-next-marker', nextMarker);
             }
         });
     };
@@ -198,6 +209,10 @@ const DisplayController = (function() {
                         }
                     } else {
                         setStatus(`${result.currentPlayer.getName()}'s turn (${result.currentPlayer.getMarker()})`);
+                        // Update the next marker preview for all empty cells
+                        document.querySelectorAll('.cell:empty').forEach(cell => {
+                            cell.setAttribute('data-next-marker', result.currentPlayer.getMarker());
+                        });
                     }
                 }
             });
@@ -209,6 +224,8 @@ const DisplayController = (function() {
             if (gameData) {
                 cells.forEach(cell => {
                     cell.className = 'cell'; // Reset all cell classes
+                    // Set the next marker preview for all cells
+                    cell.setAttribute('data-next-marker', gameData.currentPlayer.getMarker());
                 });
                 setStatus(`${gameData.currentPlayer.getName()}'s turn (${gameData.currentPlayer.getMarker()})`);
                 updateBoard();
@@ -217,6 +234,25 @@ const DisplayController = (function() {
                 playerSetupDiv.style.display = 'block';
                 gameContainerDiv.style.display = 'none';
             }
+        });
+        
+        // Change Players button
+        changePlayersBtn.addEventListener('click', () => {
+            // If there are active players, pre-fill the input fields with their names
+            if (GameController.isGameActive()) {
+                const players = GameController.getPlayers();
+                if (players && players.length === 2) {
+                    player1Input.value = players[0].getName();
+                    player2Input.value = players[1].getName();
+                }
+            }
+            
+            // Show player setup screen
+            playerSetupDiv.style.display = 'block';
+            gameContainerDiv.style.display = 'none';
+            
+            // Reset board for new players
+            Gameboard.resetBoard();
         });
     };
     
